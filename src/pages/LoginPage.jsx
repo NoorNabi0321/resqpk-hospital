@@ -72,7 +72,7 @@ export default function LoginPage() {
             disabled={isLoading}
             className="flex w-full items-center justify-center rounded-xl bg-[#EF4444] py-3 font-semibold text-white transition hover:bg-[#dc2626] disabled:opacity-60"
           >
-            {isLoading ? <LoadingSpinner /> : 'Sign In'}
+            {isLoading ? <LoadingSpinner color="white" /> : 'Sign In'}
           </button>
 
           {error && (
