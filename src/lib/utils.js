@@ -67,10 +67,29 @@ export function normalizeCase(c) {
     bloodGroup: c.patient?.medical_profiles?.blood_group ?? c.bloodGroup,
     conditions: c.patient?.medical_profiles?.chronic_conditions ?? c.chronicConditions ?? [],
     allergies: c.patient?.medical_profiles?.allergies ?? c.allergies ?? [],
-    consciousness: c.ai_report?.consciousness_state ?? c.consciousnessState,
-    keyObservations: c.ai_report?.key_observations ?? c.keyObservations ?? [],
-    firstAidSuggestion: c.ai_report?.first_aid_suggestion ?? c.firstAidSuggestion,
-    hasAiReport: !!c.ai_report || c.has_ai_report === true || c.hasAiReport === true,
+    // AI report — `aiReport` (camelCase, from the ai_report_ready socket event)
+    // is richer; `ai_report` (snake, from hospital:join embed) is the fallback.
+    consciousness:
+      c.aiReport?.consciousnessState ?? c.ai_report?.consciousness_state ?? c.consciousnessState,
+    keyObservations:
+      c.aiReport?.keyObservations ?? c.ai_report?.key_observations ?? c.keyObservations ?? [],
+    firstAidSuggestion:
+      c.aiReport?.firstAidSuggestion ?? c.ai_report?.first_aid_suggestion ?? c.firstAidSuggestion,
+    hospitalPreparation:
+      c.aiReport?.hospitalPreparation ?? c.ai_report?.hospital_preparation ?? c.hospitalPreparation,
+    possibleConditions:
+      c.aiReport?.possibleConditions ?? c.ai_report?.possible_conditions ?? c.possibleConditions ?? [],
+    medicationsMentioned:
+      c.aiReport?.medicationsMentioned ?? c.ai_report?.medications_mentioned ?? [],
+    transcribedText:
+      c.aiReport?.transcribedText ?? c.ai_report?.transcribed_text ?? c.transcribedText,
+    inputLanguage:
+      c.aiReport?.inputLanguage ?? c.ai_report?.input_language ?? c.detectedLanguage,
+    generationTimeMs:
+      c.aiReport?.generationTimeMs ?? c.ai_report?.generation_time_ms ?? c.generationTimeMs,
+    generationStatus: c.ai_report?.generation_status ?? c.generationStatus,
+    hasAiReport:
+      !!c.aiReport || !!c.ai_report || c.has_ai_report === true || c.hasAiReport === true,
     etaSeconds: c.estimated_driver_arrival_seconds ?? c.etaSeconds,
     sosTriggeredAt: c.sos_triggered_at ?? c.sosTriggeredAt,
     driverAssignedAt: c.driver_assigned_at ?? c.driverAssignedAt,

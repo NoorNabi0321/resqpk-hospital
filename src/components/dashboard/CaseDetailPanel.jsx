@@ -1,5 +1,6 @@
+import { useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { X, Phone, BedDouble, Download, MapPin } from 'lucide-react';
+import { X, Phone, BedDouble, Download, MapPin, Clock, ChevronDown } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 import StatusBadge from '../ui/StatusBadge';
@@ -7,6 +8,171 @@ import LiveMapPanel from './LiveMapPanel';
 import useRealtimeStore from '../../stores/realtimeStore';
 import useAuthStore from '../../stores/authStore';
 import { normalizeCase, formatTime, formatDuration } from '../../lib/utils';
+
+const URGENCY_EMOJI = { critical: '🔴', moderate: '🟡', low: '🟢' };
+
+function urgencyClasses(u) {
+  if (u === 'critical') return 'bg-emergency-red/15 border-l-emergency-red text-emergency-red';
+  if (u === 'moderate') return 'bg-emergency-amber/15 border-l-emergency-amber text-emergency-amber';
+  if (u === 'low') return 'bg-emergency-green/15 border-l-emergency-green text-emergency-green';
+  return 'bg-gray-100 border-l-gray-300 text-gray-500';
+}
+
+function ReportCard({ delay = 0, className = '', children }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay }}
+      className={`rounded-xl p-2.5 ${className}`}
+    >
+      {children}
+    </motion.div>
+  );
+}
+
+// Full AI report display: waiting → processing → complete states.
+function AIReportSection({ c }) {
+  const [showConditions, setShowConditions] = useState(false);
+  const [showTranscript, setShowTranscript] = useState(false);
+
+  // Processing
+  if (c.generationStatus === 'processing') {
+    return (
+      <div className="rounded-xl border border-chart-one/40 p-3 animate-pulse space-y-2">
+        <p className="text-[13px] text-chart-one">AI is analyzing the emergency…</p>
+        {[0, 1, 2].map((i) => (
+          <div key={i} className="h-8 rounded-lg bg-gray-100" />
+        ))}
+      </div>
+    );
+  }
+
+  // No report yet
+  if (!c.hasAiReport) {
+    return (
+      <div className="rounded-xl border border-dashed border-gray-300 p-4 flex items-center gap-2 text-gray-400">
+        <Clock size={16} />
+        <span className="text-[13px]">Waiting for AI report…</span>
+      </div>
+    );
+  }
+
+  const langLabel = c.transcribedText
+    ? `Voice: ${(c.inputLanguage ?? 'auto').toUpperCase()}`
+    : `Text: ${(c.inputLanguage ?? 'EN').toUpperCase()}`;
+
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center gap-2 flex-wrap">
+        {c.generationTimeMs != null && (
+          <span className="text-[10px] px-2 py-0.5 rounded-full bg-emergency-green/10 text-emergency-green">
+            Generated in {(c.generationTimeMs / 1000).toFixed(1)}s
+          </span>
+        )}
+        <span className="text-[10px] px-2 py-0.5 rounded-full bg-gray-100 text-gray-500">
+          {langLabel}
+        </span>
+      </div>
+
+      {/* Urgency banner */}
+      <ReportCard delay={0.05} className={`border-l-4 ${urgencyClasses(c.urgency)}`}>
+        <p className="text-sm font-bold">
+          {URGENCY_EMOJI[c.urgency] ?? '⚪'} {(c.urgency ?? 'unknown').toUpperCase()}
+        </p>
+        <p className="text-[13px] text-gray-700">{c.emergencyType ?? '—'}</p>
+      </ReportCard>
+
+      {/* Consciousness + vitals */}
+      <ReportCard delay={0.11} className="bg-gray-50">
+        <p className="text-[13px] text-gray-700">👁 Consciousness: {c.consciousness ?? '—'}</p>
+        {c.bloodGroup && <p className="text-[13px] text-gray-700">🩸 Blood: {c.bloodGroup}</p>}
+        {(c.medicationsMentioned ?? []).length > 0 && (
+          <p className="text-[13px] text-gray-700">
+            💊 Medications: {c.medicationsMentioned.join(', ')}
+          </p>
+        )}
+      </ReportCard>
+
+      {/* Key observations */}
+      {(c.keyObservations ?? []).length > 0 && (
+        <ReportCard delay={0.17} className="bg-gray-50">
+          <p className="text-[10px] text-gray-400 mb-1">📋 Key Observations</p>
+          <ul className="text-[13px] text-gray-700 list-disc list-inside space-y-0.5">
+            {c.keyObservations.slice(0, 5).map((o, i) => (
+              <li key={i} className="line-clamp-2">{o}</li>
+            ))}
+          </ul>
+        </ReportCard>
+      )}
+
+      {/* Hospital preparation */}
+      {c.hospitalPreparation && (
+        <ReportCard delay={0.23} className="bg-emergency-green/5 border border-emergency-green/20">
+          <p className="text-[10px] text-emergency-green font-semibold mb-0.5">
+            🏥 Hospital Should Prepare
+          </p>
+          <p className="text-[13px] text-gray-700">{c.hospitalPreparation}</p>
+        </ReportCard>
+      )}
+
+      {/* First aid */}
+      {c.firstAidSuggestion && (
+        <ReportCard delay={0.29} className="bg-chart-one/5 border border-chart-one/20">
+          <p className="text-[10px] text-chart-one font-semibold mb-0.5">💊 First Aid</p>
+          <p className="text-[13px] text-gray-700">{c.firstAidSuggestion}</p>
+        </ReportCard>
+      )}
+
+      {/* Possible conditions (collapsible) */}
+      {(c.possibleConditions ?? []).length > 0 && (
+        <div className="rounded-xl bg-gray-50 p-2.5">
+          <button
+            onClick={() => setShowConditions((v) => !v)}
+            className="flex items-center justify-between w-full text-[13px] text-gray-700"
+          >
+            <span>Possible Conditions</span>
+            <ChevronDown
+              size={15}
+              className={`transition-transform ${showConditions ? 'rotate-180' : ''}`}
+            />
+          </button>
+          {showConditions && (
+            <div className="mt-1.5">
+              <ul className="text-[13px] text-gray-700 list-disc list-inside space-y-0.5">
+                {c.possibleConditions.map((p, i) => (
+                  <li key={i}>{p}</li>
+                ))}
+              </ul>
+              <p className="text-[10px] text-gray-400 italic mt-1">
+                AI assessment only — clinical judgment required
+              </p>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Transcription (collapsible) */}
+      {c.transcribedText && (
+        <div className="rounded-xl bg-gray-50 p-2.5">
+          <button
+            onClick={() => setShowTranscript((v) => !v)}
+            className="flex items-center justify-between w-full text-[13px] text-gray-700"
+          >
+            <span>🎤 Voice transcription</span>
+            <ChevronDown
+              size={15}
+              className={`transition-transform ${showTranscript ? 'rotate-180' : ''}`}
+            />
+          </button>
+          {showTranscript && (
+            <p className="text-[13px] text-gray-600 italic mt-1.5">{c.transcribedText}</p>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
 
 function Section({ title, children }) {
   return (
@@ -119,65 +285,8 @@ export default function CaseDetailPanel({ selectedCaseId, caseData, onClose }) {
           </Section>
 
           {/* AI Report */}
-          <Section title="AI Triage Report">
-            {c.hasAiReport ? (
-              <div className="space-y-2">
-                <div className="grid grid-cols-2 gap-2">
-                  <motion.div
-                    initial={{ opacity: 0, y: 6 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.05 }}
-                    className="rounded-xl bg-gray-50 p-2.5"
-                  >
-                    <p className="text-[10px] text-gray-400">Urgency</p>
-                    <p className="text-sm font-semibold capitalize text-gray-800">{c.urgency}</p>
-                  </motion.div>
-                  <motion.div
-                    initial={{ opacity: 0, y: 6 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.1 }}
-                    className="rounded-xl bg-gray-50 p-2.5"
-                  >
-                    <p className="text-[10px] text-gray-400">Consciousness</p>
-                    <p className="text-sm font-semibold capitalize text-gray-800">
-                      {c.consciousness ?? '—'}
-                    </p>
-                  </motion.div>
-                </div>
-                {(c.keyObservations ?? []).length > 0 && (
-                  <motion.div
-                    initial={{ opacity: 0, y: 6 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.15 }}
-                    className="rounded-xl bg-gray-50 p-2.5"
-                  >
-                    <p className="text-[10px] text-gray-400 mb-1">Key Observations</p>
-                    <ul className="text-[13px] text-gray-700 list-disc list-inside space-y-0.5">
-                      {c.keyObservations.map((o, i) => (
-                        <li key={i}>{o}</li>
-                      ))}
-                    </ul>
-                  </motion.div>
-                )}
-                {c.firstAidSuggestion && (
-                  <motion.div
-                    initial={{ opacity: 0, y: 6 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.2 }}
-                    className="rounded-xl bg-emergency-green/5 border border-emergency-green/20 p-2.5"
-                  >
-                    <p className="text-[10px] text-emergency-green font-semibold mb-0.5">
-                      First Aid Suggestion
-                    </p>
-                    <p className="text-[13px] text-gray-700">{c.firstAidSuggestion}</p>
-                  </motion.div>
-                )}
-              </div>
-            ) : (
-              <div className="rounded-xl bg-gray-50 p-3 animate-pulse">
-                <p className="text-[13px] text-gray-400">Awaiting AI report…</p>
-              </div>
-            )}
+          <Section title="AI Emergency Report">
+            <AIReportSection c={c} />
           </Section>
 
           {/* Medical Profile */}

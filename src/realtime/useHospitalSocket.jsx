@@ -1,7 +1,13 @@
 import { useEffect } from 'react';
 import { connectSocket } from './socketClient';
 import useRealtimeStore from '../stores/realtimeStore';
-import { notifyNewCase, notifyEtaWarning, notifyBedUpdate } from '../lib/notifications';
+import {
+  notifyNewCase,
+  notifyEtaWarning,
+  notifyBedUpdate,
+  notifyAIReportReady,
+} from '../lib/notifications';
+import { normalizeCase } from '../lib/utils';
 
 /// Connects the hospital dashboard socket, joins the hospital room, loads the
 /// initial case/bed snapshot, and keeps the realtime store updated.
@@ -35,8 +41,20 @@ export function useHospitalSocket() {
       notifyNewCase(data);
     };
     const onCaseUpdate = (data) => {
-      if (data?.caseId) {
-        const s = useRealtimeStore.getState();
+      if (!data?.caseId) return;
+      const s = useRealtimeStore.getState();
+      if (data.type === 'ai_report_ready' && data.report) {
+        s.updateCase(data.caseId, {
+          has_ai_report: true,
+          aiReport: data.report,
+          urgency_level: data.report.urgencyLevel,
+          emergency_type: data.report.emergencyType,
+        });
+        s.touch();
+        const existing = s.activeCases.find((x) => (x.id ?? x.caseId) === data.caseId);
+        const c = existing ? normalizeCase(existing) : { patientName: 'Patient' };
+        notifyAIReportReady(c.patientName, data.report.urgencyLevel);
+      } else {
         s.updateCase(data.caseId, data);
         s.touch();
       }

@@ -50,6 +50,37 @@ export function notifyEtaWarning(raw) {
   );
 }
 
+// AI report ready — urgency-colored, links the hospital to preparation notes.
+export function notifyAIReportReady(patientName, urgencyLevel) {
+  const color =
+    urgencyLevel === 'critical'
+      ? 'border-l-emergency-red'
+      : urgencyLevel === 'moderate'
+        ? 'border-l-emergency-amber'
+        : 'border-l-emergency-green';
+  toast.custom(
+    (t) => (
+      <div
+        className={cn(
+          'flex items-start gap-3 p-3 rounded-xl glass border-l-4',
+          color,
+          t.visible ? 'animate-slide-in-right' : 'opacity-0',
+        )}
+      >
+        <span className="text-lg leading-none">🤖</span>
+        <div>
+          <p className="font-medium text-sm">AI Report Ready</p>
+          <p className="text-xs text-gray-500 mt-0.5">
+            {patientName || 'Patient'} — {urgencyLevel || 'unknown'}
+          </p>
+          <p className="text-xs text-gray-400">Hospital preparation notes available</p>
+        </div>
+      </div>
+    ),
+    { duration: 10000 },
+  );
+}
+
 // Bed status confirmation — green success toast.
 export function notifyBedUpdate(data) {
   toast.success(`Bed status updated: ${data.bedType} — ${data.availableCount} available`, {
