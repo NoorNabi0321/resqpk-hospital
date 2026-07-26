@@ -2,46 +2,72 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Glassmorphism utilities */
-.glass {
-  background: rgba(255, 255, 255, 0.72);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.2);
+/* v2: light, clarity-first. Glassmorphism removed from the working screens —
+   reception areas are bright and translucent panels hurt readability. */
+
+@layer base {
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+
+  body {
+    @apply bg-page text-ink;
+    font-feature-settings: 'tnum' 1; /* tabular figures keep the ETA from jittering */
+    -webkit-font-smoothing: antialiased;
+  }
 }
 
-.glass-dark {
-  background: rgba(17, 24, 39, 0.8);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+@layer components {
+  .v2-card {
+    @apply bg-card border border-line rounded-card shadow-card;
+  }
+
+  /* Colour-coded left edge: what the receptionist reads first. */
+  .v2-card-critical {
+    @apply border-l-4 border-l-critical;
+  }
+  .v2-card-decision {
+    @apply border-l-4 border-l-decision;
+  }
+  .v2-card-ready {
+    @apply border-l-4 border-l-ready;
+  }
 }
 
-/* Scrollbar styling */
+/* Scrollbars: visible enough to find, quiet enough to ignore. */
 ::-webkit-scrollbar {
-  width: 4px;
+  width: 8px;
+  height: 8px;
 }
 ::-webkit-scrollbar-track {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(148, 163, 184, 0.3);
-  border-radius: 2px;
+  background: #cbd5e1;
+  border-radius: 4px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(148, 163, 184, 0.5);
+  background: #94a3b8;
 }
 
-/* Card hover lift */
-.card-hover {
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+/* react-pdf needs these for text/annotation layers to align with the canvas. */
+.react-pdf__Page {
+  margin-bottom: 12px;
 }
-.card-hover:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+.react-pdf__Page__canvas {
+  margin: 0 auto;
+  max-width: 100%;
+  height: auto !important;
 }
 
-/* Smooth easing for all transitions */
-* {
-  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }

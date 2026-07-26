@@ -94,7 +94,34 @@ export function normalizeCase(c) {
     sosTriggeredAt: c.sos_triggered_at ?? c.sosTriggeredAt,
     driverAssignedAt: c.driver_assigned_at ?? c.driverAssignedAt,
     driverArrivedAt: c.driver_arrived_at ?? c.driverArrivedAt,
+    // v2 — decision + report artefacts.
+    decision: c.hospital_decision ?? c.hospitalDecision ?? 'awaiting_review',
+    decisionAt: c.decision_at ?? c.decisionAt,
+    preparationNote: c.preparation_note ?? c.preparationNote,
+    redirectReason: c.redirect_reason ?? c.redirectReason,
+    redirectedFromHospitalId: c.redirected_from_hospital_id ?? c.redirectedFromHospitalId,
+    pdfUrl: c.pdf_url ?? c.pdfUrl ?? c.ai_report?.pdf_url,
+    resourcesNeeded:
+      c.resources_needed ?? c.resourcesNeeded ?? c.ai_report?.resources_needed ?? [],
+    address: c.patient_address ?? c.patientAddress,
   };
+}
+
+// Seconds remaining, interpolated from the last socket update so the number
+// ticks every second instead of jumping only when the server speaks.
+export function liveEtaSeconds(eta, nowMs) {
+  if (!eta || eta.durationSeconds == null) return null;
+  const elapsed = Math.floor((nowMs - (eta.receivedAt ?? nowMs)) / 1000);
+  return Math.max(eta.durationSeconds - elapsed, 0);
+}
+
+// mm:ss — the receptionist reads this from across the desk.
+export function formatEtaClock(seconds) {
+  if (seconds == null) return '—';
+  if (seconds <= 0) return 'Now';
+  const m = Math.floor(seconds / 60);
+  const s = seconds % 60;
+  return `${m}:${String(s).padStart(2, '0')}`;
 }
 
 export function getStatusLabel(status) {

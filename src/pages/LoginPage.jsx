@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Eye, EyeOff } from 'lucide-react';
 import useAuthStore from '../stores/authStore';
@@ -85,6 +85,14 @@ export default function LoginPage() {
             </motion.p>
           )}
         </form>
+
+        {/* Camps self-register here; approval happens before they go live. */}
+        <p className="mt-6 text-center text-xs text-gray-400">
+          Running a free health camp?{' '}
+          <Link to="/camp/register" className="text-[#3B82F6] hover:underline font-medium">
+            Register a Medical Camp
+          </Link>
+        </p>
       </motion.div>
     </div>
   );

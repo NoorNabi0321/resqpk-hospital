@@ -1,88 +1,122 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { LayoutDashboard, AlertCircle, BarChart2, Settings, Bell } from 'lucide-react';
+import { NavLink, useNavigate } from 'react-router-dom';
+import { BarChart3, LogOut, Volume2, VolumeX } from 'lucide-react';
 
 import useAuthStore from '../../stores/authStore';
 import useRealtimeStore from '../../stores/realtimeStore';
-import PillNav from '../ui/PillNav';
-import LiveDot from '../ui/LiveDot';
-import { cn } from '../../lib/utils';
+import { isMuted, setMuted } from '../../lib/alerts';
+import NotificationBell from './NotificationBell';
 
-export default function TopNav({ activeTab, onTabChange }) {
+// v2 nav: three working tabs. Analytics is demoted to an icon — it is for
+// managers reviewing later, never for the person handling a live ambulance.
+const TABS = [
+  { to: '/incoming', label: 'Incoming' },
+  { to: '/resources', label: 'Resources' },
+  { to: '/history', label: 'History' },
+];
+
+function TabLink({ to, label }) {
+  return (
+    <NavLink
+      to={to}
+      className={({ isActive }) =>
+        [
+          'px-4 h-9 inline-flex items-center rounded-lg text-sm font-medium transition-colors',
+          isActive ? 'bg-info-tint text-info' : 'text-ink-soft hover:bg-page hover:text-ink',
+        ].join(' ')
+      }
+    >
+      {label}
+    </NavLink>
+  );
+}
+
+export default function TopNav() {
   const navigate = useNavigate();
-  const { hospital, user, logout } = useAuthStore();
-  const activeCases = useRealtimeStore((s) => s.activeCases);
-  const beds = useRealtimeStore((s) => s.beds);
+  const hospital = useAuthStore((s) => s.hospital);
+  const logout = useAuthStore((s) => s.logout);
   const isLive = useRealtimeStore((s) => s.isLive);
-  const [menuOpen, setMenuOpen] = useState(false);
+  const [muted, setMutedState] = useState(isMuted());
 
-  const availableBeds = beds.reduce((sum, b) => sum + (b.available_count || 0), 0);
-  const bedColor =
-    availableBeds > 5
-      ? 'text-emergency-green'
-      : availableBeds >= 1
-        ? 'text-emergency-amber'
-        : 'text-emergency-red';
+  const toggleMute = () => {
+    const next = !muted;
+    setMuted(next);
+    setMutedState(next);
+  };
 
-  const tabs = [
-    { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    { id: 'cases', label: 'Active Cases', icon: AlertCircle, badge: activeCases.length },
-    { id: 'analytics', label: 'Analytics', icon: BarChart2 },
-    { id: 'settings', label: 'Settings', icon: Settings },
-  ];
-
-  const initials = (hospital?.name ?? user?.email ?? '?').slice(0, 1).toUpperCase();
   const handleLogout = () => {
     logout();
-    navigate('/login');
+    navigate('/login', { replace: true });
   };
 
   return (
-    <header className="fixed top-0 inset-x-0 h-14 z-50 bg-white border-b border-gray-200 flex items-center px-4 gap-4">
-      <div className="flex items-center gap-2 min-w-0">
-        <span className="text-emergency-red font-bold text-lg">ResQPK</span>
-        <span className="text-gray-300">•</span>
-        <span className="text-gray-600 text-sm truncate">{hospital?.name ?? 'Hospital'}</span>
-      </div>
+    <header className="h-14 bg-card border-b border-line sticky top-0 z-40">
+      <div className="h-full px-4 flex items-center gap-4">
+        {/* Identity */}
+        <div className="flex items-center gap-2.5 min-w-0">
+          <span className="w-7 h-7 rounded-lg bg-critical text-white grid place-items-center text-xs font-bold shrink-0">
+            R
+          </span>
+          <div className="min-w-0">
+            <div className="text-sm font-semibold leading-tight">ResQPK</div>
+            <div className="text-[11px] text-ink-muted truncate leading-tight max-w-[180px]">
+              {hospital?.name || 'Hospital'}
+            </div>
+          </div>
+        </div>
 
-      <div className="flex-1 flex justify-center">
-        <PillNav tabs={tabs} activeTab={activeTab} onTabChange={onTabChange} />
-      </div>
+        {/* Primary tabs */}
+        <nav className="flex items-center gap-1 mx-auto">
+          {TABS.map((t) => (
+            <TabLink key={t.to} {...t} />
+          ))}
+        </nav>
 
-      <div className="flex items-center gap-3">
-        <LiveDot isLive={isLive} />
-        <span className={cn('text-xs font-medium px-2.5 py-1 rounded-full bg-gray-100', bedColor)}>
-          🛏 {availableBeds} beds
-        </span>
-        <button className="text-gray-500 hover:text-gray-700" aria-label="Notifications">
-          <Bell size={18} />
-        </button>
-        <div className="relative">
-          <button
-            onClick={() => setMenuOpen((v) => !v)}
-            className="w-8 h-8 rounded-full bg-emergency-blue text-white text-sm font-medium flex items-center justify-center"
+        {/* Utilities */}
+        <div className="flex items-center gap-1 shrink-0">
+          <span
+            className={[
+              'hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium',
+              isLive ? 'bg-ready-tint text-ready' : 'bg-critical-tint text-critical',
+            ].join(' ')}
+            title={isLive ? 'Live connection active' : 'Reconnecting…'}
           >
-            {initials}
+            <span
+              className={`w-1.5 h-1.5 rounded-full ${isLive ? 'bg-ready animate-pulse' : 'bg-critical'}`}
+            />
+            {isLive ? 'Live' : 'Offline'}
+          </span>
+
+          <button
+            onClick={toggleMute}
+            title={muted ? 'Alerts muted — click to unmute' : 'Alert sounds on'}
+            className="w-9 h-9 grid place-items-center rounded-lg text-ink-muted hover:bg-page hover:text-ink transition-colors"
+          >
+            {muted ? <VolumeX size={17} /> : <Volume2 size={17} />}
           </button>
-          {menuOpen && (
-            <>
-              <div className="fixed inset-0 z-40" onClick={() => setMenuOpen(false)} />
-              <div className="absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-lg border border-gray-200 p-2 z-50">
-                <div className="px-3 py-2">
-                  <p className="text-sm font-medium text-gray-900 truncate">
-                    {hospital?.name ?? 'Hospital'}
-                  </p>
-                  <p className="text-xs text-gray-500 truncate">{user?.email}</p>
-                </div>
-                <button
-                  onClick={handleLogout}
-                  className="w-full text-left px-3 py-2 rounded-lg text-sm text-emergency-red hover:bg-emergency-red/10"
-                >
-                  Logout
-                </button>
-              </div>
-            </>
-          )}
+
+          <NotificationBell />
+
+          <NavLink
+            to="/analytics"
+            title="Analytics"
+            className={({ isActive }) =>
+              [
+                'w-9 h-9 grid place-items-center rounded-lg transition-colors',
+                isActive ? 'bg-info-tint text-info' : 'text-ink-muted hover:bg-page hover:text-ink',
+              ].join(' ')
+            }
+          >
+            <BarChart3 size={17} />
+          </NavLink>
+
+          <button
+            onClick={handleLogout}
+            title="Sign out"
+            className="w-9 h-9 grid place-items-center rounded-lg text-ink-muted hover:bg-critical-tint hover:text-critical transition-colors"
+          >
+            <LogOut size={17} />
+          </button>
         </div>
       </div>
     </header>
