@@ -80,6 +80,21 @@ export function useHospitalSocket() {
         return;
       }
 
+      // The patient chose a different hospital — this case is no longer ours.
+      if (data.type === 'hospital_changed') {
+        s.removeCase(data.caseId);
+        s.touch();
+        notifyDecision({
+          tone: 'decision',
+          title: 'Patient chose another hospital',
+          body: data.newHospitalName
+            ? `Now going to ${data.newHospitalName}`
+            : 'This case moved to another hospital',
+        });
+        flashTabTitle(useRealtimeStore.getState().activeCases.length);
+        return;
+      }
+
       // This hospital redirected the case away — it belongs to someone else now.
       if (data.type === 'redirected_away') {
         s.removeCase(data.caseId);
