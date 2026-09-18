@@ -6,13 +6,23 @@ export default {
   theme: {
     extend: {
       colors: {
-        // Page + surfaces
+        // Page + surfaces. `canvas` and `surface` are the names the Flutter app
+        // uses for the same values (lib/core/theme/tokens.dart); `page` and
+        // `card` are kept because the dashboard is written in terms of them.
         page: '#F6F8FB',
+        canvas: '#F6F8FB',
         card: '#FFFFFF',
+        surface: '#FFFFFF',
+        surfaceAlt: '#F8FAFC',
         line: '#E5E9F0',
 
+        // Brand navy — headers, the landing page hero, the driver app's chrome.
+        brand: { DEFAULT: '#0B2545', soft: '#134074' },
+
         // Semantic colours — one meaning each, used consistently.
-        critical: { DEFAULT: '#DC2626', tint: '#FEF2F2' },
+        // Reserved for emergencies and critical urgency. Never for delete
+        // buttons or decoration — if red is everywhere it signals nothing.
+        critical: { DEFAULT: '#DC2626', tint: '#FEF2F2', pressed: '#B91C1C' },
         decision: { DEFAULT: '#D97706', tint: '#FFFBEB' },
         ready: { DEFAULT: '#059669', tint: '#ECFDF5' },
         info: { DEFAULT: '#2563EB', tint: '#EFF6FF' },
