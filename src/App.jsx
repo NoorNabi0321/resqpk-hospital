@@ -4,7 +4,8 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from 'react-hot-toast';
 
 import LoginPage from './pages/LoginPage';
-import TrackingPage from './pages/TrackingPage';
+import SosPage from './pages/public/SosPage';
+import TrackPage from './pages/public/TrackPage';
 import CampRegisterPage from './pages/CampRegisterPage';
 import DashboardLayout from './components/layout/DashboardLayout';
 import IncomingView from './pages/views/IncomingView';
@@ -59,9 +60,14 @@ export default function App() {
       />
       <BrowserRouter>
         <Routes>
-          {/* Public */}
+          {/* Public — no account. The patient side of the system. */}
+          <Route path="/sos" element={<SosPage />} />
+          <Route path="/t/:token" element={<TrackPage />} />
+          <Route path="/c/:caseId" element={<TrackPage />} />
+          {/* Older links shared before the shorter /t/ form existed. */}
+          <Route path="/track/:token" element={<TrackPage />} />
+
           <Route path="/login" element={<LoginPage />} />
-          <Route path="/track/:token" element={<TrackingPage />} />
           <Route path="/camp/register" element={<CampRegisterPage />} />
 
           {/* Authenticated shell */}

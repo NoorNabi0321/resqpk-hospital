@@ -18,6 +18,27 @@ export function connectSocket() {
   return socket;
 }
 
+/**
+ * A connection scoped to a single case, for the public tracking page.
+ *
+ * Separate from the dashboard socket above on purpose: it authenticates with a
+ * case token rather than a staff login, and it must not replace the shared
+ * instance if someone happens to have the dashboard open in another tab. The
+ * server puts this connection in that one case room and registers no role
+ * handlers for it.
+ */
+export function connectCaseSocket(caseToken) {
+  const socketUrl =
+    import.meta.env.VITE_SOCKET_URL || import.meta.env.VITE_API_URL || 'http://localhost:3000';
+
+  return io(socketUrl, {
+    auth: { token: caseToken },
+    transports: ['websocket', 'polling'], // polling fallback for restrictive mobile networks
+    reconnectionAttempts: 10,
+    reconnectionDelay: 2000,
+  });
+}
+
 export function getSocket() {
   return socket;
 }
