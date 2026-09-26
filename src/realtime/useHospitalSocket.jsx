@@ -47,14 +47,6 @@ export function useHospitalSocket() {
       playNewCaseChime();
       flashTabTitle(useRealtimeStore.getState().activeCases.length);
 
-      if (data?.type === 'redirected_in') {
-        notifyDecision({
-          tone: 'decision',
-          title: 'Case redirected here',
-          body: `From ${data.redirectedFrom || 'another hospital'}${data.reason ? ` — ${data.reason}` : ''}`,
-          caseId: data.caseId,
-        });
-      }
     };
 
     const onCaseUpdate = (data) => {
@@ -90,19 +82,6 @@ export function useHospitalSocket() {
           body: data.newHospitalName
             ? `Now going to ${data.newHospitalName}`
             : 'This case moved to another hospital',
-        });
-        flashTabTitle(useRealtimeStore.getState().activeCases.length);
-        return;
-      }
-
-      // This hospital redirected the case away — it belongs to someone else now.
-      if (data.type === 'redirected_away') {
-        s.removeCase(data.caseId);
-        s.touch();
-        notifyDecision({
-          tone: 'ready',
-          title: 'Case redirected',
-          body: `Sent to ${data.newHospitalName || 'another hospital'}`,
         });
         flashTabTitle(useRealtimeStore.getState().activeCases.length);
         return;
@@ -151,29 +130,8 @@ export function useHospitalSocket() {
       notifyBedUpdate(data);
     };
 
-    // --- v2 decision events ---------------------------------------------------
-
-    const onAccepted = (data) => {
-      if (!data?.caseId) return;
-      const s = useRealtimeStore.getState();
-      s.updateCase(data.caseId, {
-        hospital_decision: 'accepted',
-        preparation_note: data.preparationNote ?? null,
-        decision_at: data.timestamp,
-      });
-      s.touch();
-    };
-
-    const onRedirected = (data) => {
-      if (!data?.caseId) return;
-      const s = useRealtimeStore.getState();
-      s.updateCase(data.caseId, {
-        hospital_decision: 'redirected',
-        redirect_reason: data.reason,
-        decision_at: data.timestamp,
-      });
-      s.touch();
-    };
+    // onAccepted and onRedirected were here. A ward is told what is coming,
+    // not asked whether to take it, so there is no decision to hear about.
 
     const onQuickMessage = (data) => {
       if (!data?.caseId) return;
@@ -216,8 +174,6 @@ export function useHospitalSocket() {
     socket.on('hospital:ambulance_update', onAmbulanceUpdate);
     socket.on('eta:update', onEta);
     socket.on('hospital:bed_status_changed', onBed);
-    socket.on('case:accepted', onAccepted);
-    socket.on('case:redirected', onRedirected);
     socket.on('case:quick_message', onQuickMessage);
     socket.on('hospital:resources_updated', onResourcesUpdated);
 
@@ -236,8 +192,6 @@ export function useHospitalSocket() {
       socket.off('hospital:ambulance_update', onAmbulanceUpdate);
       socket.off('eta:update', onEta);
       socket.off('hospital:bed_status_changed', onBed);
-      socket.off('case:accepted', onAccepted);
-      socket.off('case:redirected', onRedirected);
       socket.off('case:quick_message', onQuickMessage);
       socket.off('hospital:resources_updated', onResourcesUpdated);
     };

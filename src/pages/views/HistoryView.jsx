@@ -19,24 +19,6 @@ function todayInPKT() {
   return new Date(Date.now() + 5 * 3600 * 1000).toISOString().slice(0, 10);
 }
 
-function DecisionCell({ c }) {
-  if (c.decision === 'accepted') {
-    return (
-      <span className="text-ready font-medium">
-        Accepted{c.preparationNote ? ` · ${c.preparationNote}` : ''}
-      </span>
-    );
-  }
-  if (c.decision === 'redirected') {
-    return (
-      <span className="text-ink-muted">
-        Redirected{c.redirectReason ? ` · ${c.redirectReason}` : ''}
-      </span>
-    );
-  }
-  return <span className="text-ink-faint">—</span>;
-}
-
 export default function HistoryView() {
   const navigate = useNavigate();
   const [status, setStatus] = useState('all');
@@ -123,7 +105,6 @@ export default function HistoryView() {
                 <th className="text-left font-semibold px-4 py-2.5">Patient</th>
                 <th className="text-left font-semibold px-4 py-2.5">Urgency</th>
                 <th className="text-left font-semibold px-4 py-2.5">Status</th>
-                <th className="text-left font-semibold px-4 py-2.5">Decision</th>
                 <th className="text-left font-semibold px-4 py-2.5">Report</th>
                 <th className="text-left font-semibold px-4 py-2.5">Time</th>
                 <th className="w-8" />
@@ -174,9 +155,6 @@ export default function HistoryView() {
                       </span>
                     </td>
                     <td className="px-4 py-3 text-ink-soft">{getStatusLabel(c.status)}</td>
-                    <td className="px-4 py-3 text-xs">
-                      <DecisionCell c={c} />
-                    </td>
                     <td className="px-4 py-3">
                       {c.hasAiReport ? (
                         <span className="inline-flex items-center gap-1 text-info text-xs">

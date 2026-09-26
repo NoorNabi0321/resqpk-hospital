@@ -27,10 +27,14 @@ function Chip({ children, tone = 'gray' }) {
 }
 
 // The left edge encodes the single most important fact about the card.
+//
+// It used to lead with whether the ward had accepted. Nothing is accepted or
+// refused now, so it leads with how sick the patient is — which is what the
+// edge should have been saying all along.
 function edgeClass(c) {
-  if (c.decision === 'accepted') return 'border-l-4 border-l-ready';
   if (c.urgency === 'critical') return 'border-l-4 border-l-critical';
-  return 'border-l-4 border-l-decision';
+  if (c.urgency === 'moderate') return 'border-l-4 border-l-decision';
+  return 'border-l-4 border-l-info';
 }
 
 function ReportLine({ c, isNew }) {
@@ -55,18 +59,18 @@ function ReportLine({ c, isNew }) {
   );
 }
 
-function DecisionLine({ c }) {
-  if (c.decision === 'accepted') {
+// What this desk should be doing about the card, which is never "decide".
+function PrepareLine({ c }) {
+  const needed = Array.isArray(c.resourcesNeeded) ? c.resourcesNeeded.filter(Boolean) : [];
+  if (needed.length) {
     return (
-      <span className="text-ready font-medium">
-        Accepted ✓{c.preparationNote ? ` · ${c.preparationNote}` : ''}
+      <span className="text-decision font-medium">
+        Prepare: {needed.slice(0, 3).join(' · ')}
+        {needed.length > 3 ? ` +${needed.length - 3}` : ''}
       </span>
     );
   }
-  if (c.decision === 'redirected') {
-    return <span className="text-ink-muted">Redirected →</span>;
-  }
-  return <span className="text-decision font-medium">Awaiting your decision</span>;
+  return <span className="text-ink-muted">Nothing specific requested yet</span>;
 }
 
 function AmbulanceCard({ c, etaSeconds, isNewReport, hasArrived }) {
@@ -126,11 +130,11 @@ function AmbulanceCard({ c, etaSeconds, isNewReport, hasArrived }) {
         {c.vehicle ? ` · ${c.vehicle}` : ''}
       </div>
 
-      {/* Row 4 — report + decision status, then the only action */}
+      {/* Row 4 — report + what to have ready, then the only action */}
       <div className="flex items-end justify-between gap-4 mt-auto">
         <div className="flex flex-col gap-1 text-xs">
           <ReportLine c={c} isNew={isNewReport} />
-          <DecisionLine c={c} />
+          <PrepareLine c={c} />
         </div>
 
         <button

@@ -1,11 +1,10 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
 import {
   AlertTriangle,
   ArrowLeft,
-  Check,
   CheckCircle2,
   Download,
   FileText,
@@ -21,14 +20,12 @@ import {
   getCaseMessages,
   getDecisionConstants,
   getReportPdfUrl,
-  acceptCase,
   sendQuickMessage,
 } from '../../api/v2';
 import useRealtimeStore from '../../stores/realtimeStore';
 import useNow from '../../hooks/useNow';
 import { normalizeCase, liveEtaSeconds, formatEtaClock, formatTime } from '../../lib/utils';
 import PdfReportViewer from '../../components/decisions/PdfReportViewer';
-import RedirectModal from '../../components/decisions/RedirectModal';
 
 function Card({ children, className = '' }) {
   return <section className={`v2-card p-5 ${className}`}>{children}</section>;
@@ -71,10 +68,6 @@ export default function CaseDetailView() {
   const clearNewReport = useRealtimeStore((s) => s.clearNewReport);
   const newReportCaseIds = useRealtimeStore((s) => s.newReportCaseIds);
 
-  const [showRedirect, setShowRedirect] = useState(false);
-  const [showAcceptPopover, setShowAcceptPopover] = useState(false);
-  const [preparationNote, setPreparationNote] = useState(null);
-  const [accepting, setAccepting] = useState(false);
   const [sendingKey, setSendingKey] = useState(null);
 
   const caseQuery = useQuery({ queryKey: ['case', caseId], queryFn: () => getCase(caseId) });
@@ -121,28 +114,12 @@ export default function CaseDetailView() {
 
   const messages = storeMessages || [];
   const etaSeconds = liveEtaSeconds(etaByCase[caseId], now) ?? c?.etaSeconds ?? null;
-  const decided = c && c.decision !== 'awaiting_review';
   const readOnly = ['completed', 'cancelled'].includes(c?.status);
 
   const hospitalMessages = useMemo(() => {
     const all = constantsQuery.data?.quickMessages || {};
     return Object.values(all).filter((m) => m.role === 'hospital');
   }, [constantsQuery.data]);
-
-  const handleAccept = async () => {
-    setAccepting(true);
-    try {
-      await acceptCase(caseId, preparationNote);
-      toast.success('Patient accepted. Driver has been notified.');
-      setShowAcceptPopover(false);
-      caseQuery.refetch();
-    } catch (err) {
-      toast.error(err.response?.data?.message || 'Could not accept the case');
-      caseQuery.refetch();
-    } finally {
-      setAccepting(false);
-    }
-  };
 
   const handleQuickMessage = async (key) => {
     setSendingKey(key);
@@ -155,11 +132,6 @@ export default function CaseDetailView() {
       setSendingKey(null);
     }
   };
-
-  const onRedirected = useCallback(() => {
-    setShowRedirect(false);
-    navigate('/incoming');
-  }, [navigate]);
 
   if (caseQuery.isLoading) {
     return (
@@ -196,21 +168,11 @@ export default function CaseDetailView() {
           <span className="text-sm font-medium">{c.caseNumber}</span>
           <div className="ml-auto flex items-center gap-3">
             {!readOnly && <span className="text-eta tabular-nums">{formatEtaClock(etaSeconds)}</span>}
-            <span
-              className={[
-                'px-2.5 py-1 rounded-md text-[11px] font-semibold',
-                c.decision === 'accepted'
-                  ? 'bg-ready-tint text-ready'
-                  : c.decision === 'redirected'
-                    ? 'bg-gray-100 text-ink-muted'
-                    : 'bg-decision-tint text-decision',
-              ].join(' ')}
-            >
-              {c.decision === 'accepted'
-                ? 'Accepted'
-                : c.decision === 'redirected'
-                  ? 'Redirected'
-                  : 'Awaiting decision'}
+{/* This said Awaiting decision / Accepted / Redirected. The ward does
+                not decide whether to take an ambulance that is already on its
+                way, so the pill says where the case has got to instead. */}
+            <span className="px-2.5 py-1 rounded-md text-[11px] font-semibold bg-ready-tint text-ready">
+              Incoming
             </span>
           </div>
         </div>
@@ -392,76 +354,16 @@ export default function CaseDetailView() {
         )}
       </Card>
 
-      {/* Decision bar */}
+      {/* Message bar.
+          Accept, Redirect and the preparation-note popover used to be here.
+          A ward that has been told what is arriving and when can have the bay
+          ready; deciding in an app, minutes out, against resource figures
+          nobody was updating was never the reliable half of that. What is left
+          is the half that was: talking to the crew on the way in. */}
       {!readOnly && (
         <div className="fixed bottom-0 left-0 right-0 z-30 bg-card border-t border-line shadow-bar">
           <div className="max-w-[1100px] mx-auto px-4 py-3">
-            {decided ? (
-              <p className="text-sm font-medium text-center">
-                {c.decision === 'accepted' ? (
-                  <span className="text-ready">
-                    Accepted ✓{c.preparationNote ? ` · ${c.preparationNote}` : ''}
-                    {c.decisionAt ? ` · ${formatTime(c.decisionAt)}` : ''}
-                  </span>
-                ) : (
-                  <span className="text-ink-muted">
-                    Redirected{c.redirectReason ? ` · ${c.redirectReason}` : ''}
-                    {c.decisionAt ? ` · ${formatTime(c.decisionAt)}` : ''}
-                  </span>
-                )}
-              </p>
-            ) : (
-              <div className="flex flex-col gap-2.5">
-                <div className="flex items-center gap-3 relative">
-                  <button
-                    onClick={() => setShowAcceptPopover((v) => !v)}
-                    className="flex-1 h-11 rounded-lg bg-ready text-white font-semibold text-sm inline-flex items-center justify-center gap-2 hover:brightness-95 transition"
-                  >
-                    <CheckCircle2 size={17} /> Accept Patient
-                  </button>
-                  <button
-                    onClick={() => setShowRedirect(true)}
-                    className="flex-1 h-11 rounded-lg border-2 border-decision text-decision font-semibold text-sm inline-flex items-center justify-center gap-2 hover:bg-decision-tint transition"
-                  >
-                    <AlertTriangle size={17} /> Redirect
-                  </button>
-
-                  {showAcceptPopover && (
-                    <div className="absolute bottom-full mb-2 left-0 w-80 bg-card border border-line rounded-card shadow-card-hover p-4">
-                      <p className="text-xs font-medium text-ink-soft mb-2">
-                        Preparation note (optional)
-                      </p>
-                      <div className="flex flex-wrap gap-1.5 mb-3">
-                        {(constantsQuery.data?.preparationNotes || []).map((note) => (
-                          <button
-                            key={note}
-                            onClick={() => setPreparationNote((prev) => (prev === note ? null : note))}
-                            className={[
-                              'px-2.5 py-1 rounded-lg text-[11px] font-medium border transition',
-                              preparationNote === note
-                                ? 'bg-ready-tint border-ready text-ready'
-                                : 'border-line text-ink-soft hover:bg-page',
-                            ].join(' ')}
-                          >
-                            {preparationNote === note && (
-                              <Check size={11} className="inline mr-1 -mt-0.5" />
-                            )}
-                            {note}
-                          </button>
-                        ))}
-                      </div>
-                      <button
-                        onClick={handleAccept}
-                        disabled={accepting}
-                        className="w-full h-9 rounded-lg bg-ready text-white text-sm font-semibold inline-flex items-center justify-center gap-2 disabled:opacity-50"
-                      >
-                        {accepting && <Loader2 size={14} className="animate-spin" />}
-                        Confirm Accept
-                      </button>
-                    </div>
-                  )}
-                </div>
-
+            <div className="flex flex-col gap-2.5">
                 {/* Quick messages */}
                 <div className="flex items-center gap-1.5 flex-wrap">
                   {hospitalMessages.map((m) => (
@@ -475,18 +377,9 @@ export default function CaseDetailView() {
                     </button>
                   ))}
                 </div>
-              </div>
-            )}
+            </div>
           </div>
         </div>
-      )}
-
-      {showRedirect && (
-        <RedirectModal
-          caseId={caseId}
-          onClose={() => setShowRedirect(false)}
-          onRedirected={onRedirected}
-        />
       )}
     </div>
   );

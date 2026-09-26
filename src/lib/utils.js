@@ -94,12 +94,10 @@ export function normalizeCase(c) {
     sosTriggeredAt: c.sos_triggered_at ?? c.sosTriggeredAt,
     driverAssignedAt: c.driver_assigned_at ?? c.driverAssignedAt,
     driverArrivedAt: c.driver_arrived_at ?? c.driverArrivedAt,
-    // v2 — decision + report artefacts.
-    decision: c.hospital_decision ?? c.hospitalDecision ?? 'awaiting_review',
-    decisionAt: c.decision_at ?? c.decisionAt,
-    preparationNote: c.preparation_note ?? c.preparationNote,
-    redirectReason: c.redirect_reason ?? c.redirectReason,
-    redirectedFromHospitalId: c.redirected_from_hospital_id ?? c.redirectedFromHospitalId,
+    // decision, decisionAt, preparationNote, redirectReason and
+    // redirectedFromHospitalId were mapped here. The ward does not decide any
+    // more, so nothing renders them; the columns stay in the database for the
+    // cases that were decided while it did.
     pdfUrl: c.pdf_url ?? c.pdfUrl ?? c.ai_report?.pdf_url,
     resourcesNeeded:
       c.resources_needed ?? c.resourcesNeeded ?? c.ai_report?.resources_needed ?? [],

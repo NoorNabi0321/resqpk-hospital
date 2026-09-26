@@ -15,16 +15,7 @@ export const updateResource = (canonicalKey, payload) =>
 export const getResourceMatch = (caseId) =>
   apiClient.get(`/api/resources/match/${caseId}`).then(data);
 
-export const getAlternatives = (caseId) =>
-  apiClient.get(`/api/resources/alternatives/${caseId}`).then(data);
-
 // --- decisions --------------------------------------------------------------
-export const acceptCase = (caseId, preparationNote) =>
-  apiClient.post('/api/decisions/accept', { caseId, preparationNote }).then(data);
-
-export const redirectCase = (caseId, newHospitalId, reason) =>
-  apiClient.post('/api/decisions/redirect', { caseId, newHospitalId, reason }).then(data);
-
 export const sendQuickMessage = (caseId, messageKey) =>
   apiClient.post('/api/decisions/message', { caseId, messageKey }).then(data);
 
@@ -55,9 +46,6 @@ export default {
   getResources,
   updateResource,
   getResourceMatch,
-  getAlternatives,
-  acceptCase,
-  redirectCase,
   sendQuickMessage,
   getCaseMessages,
   getDecisionConstants,
