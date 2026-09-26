@@ -7,14 +7,19 @@ import LoginPage from './pages/LoginPage';
 import SosPage from './pages/public/SosPage';
 import TrackPage from './pages/public/TrackPage';
 import CampRegisterPage from './pages/CampRegisterPage';
+import HospitalRegisterPage from './pages/HospitalRegisterPage';
+import RegisterChoicePage from './pages/RegisterChoicePage';
 import DashboardLayout from './components/layout/DashboardLayout';
 import IncomingView from './pages/views/IncomingView';
 import CaseDetailView from './pages/views/CaseDetailView';
 import ResourcesView from './pages/views/ResourcesView';
 import HistoryView from './pages/views/HistoryView';
 import CampDashboardView from './pages/views/CampDashboardView';
+import CampPatientsView from './pages/views/CampPatientsView';
+import AdminFacilitiesView from './pages/views/AdminFacilitiesView';
 import AnalyticsView from './views/AnalyticsView';
 import useAuthStore from './stores/authStore';
+import { audienceOf, homeFor } from './lib/navigation';
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { refetchOnWindowFocus: false, retry: 1 } },
@@ -26,14 +31,28 @@ function ProtectedRoute({ children }) {
   return children;
 }
 
-/**
- * Camps get a different home than hospitals: they have no case feed, so they
- * land on their own dashboard instead of Incoming.
- */
+/** Each kind of account has its own first screen. */
 function HomeRedirect() {
+  const user = useAuthStore((s) => s.user);
   const hospital = useAuthStore((s) => s.hospital);
-  const isCamp = hospital?.facility_type === 'medical_camp';
-  return <Navigate to={isCamp ? '/camp' : '/incoming'} replace />;
+  return <Navigate to={homeFor(user, hospital)} replace />;
+}
+
+/**
+ * Routes are guarded, not merely hidden.
+ *
+ * Leaving the tabs out of the nav stops nobody typing /incoming, and a camp
+ * that reached it would sit watching an empty ambulance feed wondering why
+ * nothing arrives. Anyone in the wrong place is sent to their own home.
+ */
+function For({ audience, children }) {
+  const user = useAuthStore((s) => s.user);
+  const hospital = useAuthStore((s) => s.hospital);
+  const allowed = Array.isArray(audience) ? audience : [audience];
+  if (!allowed.includes(audienceOf(user, hospital))) {
+    return <Navigate to={homeFor(user, hospital)} replace />;
+  }
+  return children;
 }
 
 export default function App() {
@@ -68,7 +87,11 @@ export default function App() {
           <Route path="/track/:token" element={<TrackPage />} />
 
           <Route path="/login" element={<LoginPage />} />
-          <Route path="/camp/register" element={<CampRegisterPage />} />
+          <Route path="/register" element={<RegisterChoicePage />} />
+          <Route path="/register/hospital" element={<HospitalRegisterPage />} />
+          <Route path="/register/camp" element={<CampRegisterPage />} />
+          {/* The old camp link, still in the wild. */}
+          <Route path="/camp/register" element={<Navigate to="/register/camp" replace />} />
 
           {/* Authenticated shell */}
           <Route
@@ -78,12 +101,16 @@ export default function App() {
               </ProtectedRoute>
             }
           >
-            <Route path="/incoming" element={<IncomingView />} />
-            <Route path="/case/:caseId" element={<CaseDetailView />} />
-            <Route path="/resources" element={<ResourcesView />} />
-            <Route path="/history" element={<HistoryView />} />
-            <Route path="/analytics" element={<AnalyticsView />} />
-            <Route path="/camp" element={<CampDashboardView />} />
+            <Route path="/incoming" element={<For audience="hospital"><IncomingView /></For>} />
+            <Route path="/case/:caseId" element={<For audience="hospital"><CaseDetailView /></For>} />
+            <Route path="/resources" element={<For audience="hospital"><ResourcesView /></For>} />
+            <Route path="/history" element={<For audience="hospital"><HistoryView /></For>} />
+            <Route path="/analytics" element={<For audience="hospital"><AnalyticsView /></For>} />
+
+            <Route path="/camp" element={<For audience="medical_camp"><CampDashboardView /></For>} />
+            <Route path="/camp/patients" element={<For audience="medical_camp"><CampPatientsView /></For>} />
+
+            <Route path="/admin/facilities" element={<For audience="super_admin"><AdminFacilitiesView /></For>} />
           </Route>
 
           {/* Legacy links from v1 */}

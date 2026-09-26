@@ -3,6 +3,8 @@ import { Link } from 'react-router-dom';
 import { CheckCircle2, Loader2, X } from 'lucide-react';
 
 import { registerCamp } from '../api/v2';
+import AuthShell, { Field, inputClass, submitClass } from '../components/auth/AuthShell';
+import LocationPicker from '../components/auth/LocationPicker';
 
 const EMPTY = {
   campName: '',
@@ -18,19 +20,6 @@ const EMPTY = {
   adminEmail: '',
   adminPassword: '',
 };
-
-function Field({ label, hint, children }) {
-  return (
-    <label className="block">
-      <span className="text-xs font-medium text-ink-soft">{label}</span>
-      {children}
-      {hint && <span className="block text-[11px] text-ink-faint mt-1">{hint}</span>}
-    </label>
-  );
-}
-
-const inputClass =
-  'mt-1 w-full h-10 px-3 rounded-lg border border-line text-sm focus:outline-none focus:border-info';
 
 export default function CampRegisterPage() {
   const [form, setForm] = useState(EMPTY);
@@ -89,38 +78,37 @@ export default function CampRegisterPage() {
 
   if (done) {
     return (
-      <div className="min-h-screen bg-page grid place-items-center p-6">
-        <div className="v2-card p-8 max-w-md w-full text-center">
-          <CheckCircle2 size={40} className="text-ready mx-auto mb-3" />
-          <h1 className="text-lg font-semibold">Registration received</h1>
-          <p className="text-sm text-ink-muted mt-2">
-            Your camp will appear to patients after approval.
+      <AuthShell title="Registration received" subtitle={form.campName}>
+        <div className="text-center">
+          <CheckCircle2 size={44} className="mx-auto text-ready" />
+          <p className="mt-4 text-[15px] text-ink">
+            ResQPK will review your camp before patients can find it.
           </p>
-          <p className="text-sm text-ink-soft mt-4">
-            Sign in later with <span className="font-medium">{form.adminEmail}</span> to check your
-            approval status.
+          <p className="mt-2 text-[13px] text-ink-soft">
+            Sign in with <span className="font-medium">{form.adminEmail}</span> to check the
+            review, and to start keeping a register of everyone you see.
           </p>
-          <Link
-            to="/login"
-            className="inline-block mt-6 h-10 px-5 leading-10 rounded-lg bg-info text-white text-sm font-medium"
-          >
-            Go to sign in
-          </Link>
+          <Link to="/login" className={`${submitClass} mt-6`}>Go to sign in</Link>
         </div>
-      </div>
+      </AuthShell>
     );
   }
 
   return (
-    <div className="min-h-screen bg-page py-10 px-4">
-      <form onSubmit={submit} className="max-w-2xl mx-auto">
-        <div className="mb-6">
-          <h1 className="text-xl font-semibold">Register a Medical Camp</h1>
-          <p className="text-sm text-ink-muted mt-1">
-            Free health camps appear in the ResQPK app for nearby patients during your camp dates.
-          </p>
-        </div>
-
+    <AuthShell
+      title="Register a medical camp"
+      subtitle="Reviewed by ResQPK before patients can find it"
+      width="max-w-[680px]"
+      footer={
+        <>
+          Registering a hospital instead?{' '}
+          <Link to="/register/hospital" className="font-medium text-brand-ink hover:underline">
+            Hospital registration
+          </Link>
+        </>
+      }
+    >
+      <form onSubmit={submit}>
         {error && (
           <div className="mb-4 rounded-lg bg-critical-tint border border-critical/30 px-4 py-3 text-sm text-critical">
             {error}
@@ -128,8 +116,7 @@ export default function CampRegisterPage() {
         )}
 
         {/* Camp */}
-        <section className="v2-card p-5 mb-4 flex flex-col gap-4">
-          <h2 className="font-semibold">Camp details</h2>
+        <section className="flex flex-col gap-4">
 
           <Field label="Camp name">
             <input className={inputClass} value={form.campName} onChange={set('campName')} />
@@ -154,7 +141,7 @@ export default function CampRegisterPage() {
           <Field label="Services offered" hint="Type a service and press Enter">
             <div className="mt-1 flex gap-2">
               <input
-                className="flex-1 h-10 px-3 rounded-lg border border-line text-sm focus:outline-none focus:border-info"
+                className="flex-1 h-10 px-3 rounded-lg border border-line text-sm focus:outline-none focus:border-brand"
                 value={serviceDraft}
                 onChange={(e) => setServiceDraft(e.target.value)}
                 onKeyDown={addService}
@@ -173,7 +160,7 @@ export default function CampRegisterPage() {
                 {services.map((s) => (
                   <span
                     key={s}
-                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-info-tint text-info text-[11px] font-medium"
+                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-ready-tint text-ready text-[11px] font-medium"
                   >
                     {s}
                     <button
@@ -210,31 +197,21 @@ export default function CampRegisterPage() {
         </section>
 
         {/* Location */}
-        <section className="v2-card p-5 mb-4 flex flex-col gap-4">
-          <h2 className="font-semibold">Location</h2>
+        <section className="mt-5 flex flex-col gap-4 border-t border-line pt-5">
+          <h2 className="text-xs font-medium text-ink-soft">Where the camp is</h2>
 
           <Field label="Address">
             <input className={inputClass} value={form.address} onChange={set('address')} />
           </Field>
 
-          <div className="grid sm:grid-cols-2 gap-4">
-            <Field label="Latitude" hint="From Google Maps: long-press the spot">
-              <input
-                className={inputClass}
-                value={form.lat}
-                onChange={set('lat')}
-                placeholder="25.3960"
-              />
-            </Field>
-            <Field label="Longitude">
-              <input
-                className={inputClass}
-                value={form.lng}
-                onChange={set('lng')}
-                placeholder="68.3578"
-              />
-            </Field>
-          </div>
+          {/* Two coordinate boxes used to be here. Almost nobody can answer
+              that about their own tent, and a dropped digit puts the camp in
+              another province. */}
+          <LocationPicker
+            lat={form.lat}
+            lng={form.lng}
+            onChange={({ lat, lng }) => setForm((f) => ({ ...f, lat, lng }))}
+          />
 
           <Field label="Contact phone">
             <input
@@ -246,12 +223,8 @@ export default function CampRegisterPage() {
           </Field>
         </section>
 
-        {/* Login */}
-        <section className="v2-card p-5 mb-4 flex flex-col gap-4">
-          <h2 className="font-semibold">Camp admin login</h2>
-          <p className="text-xs text-ink-muted -mt-2">
-            Use this to sign in and check your approval status.
-          </p>
+        <section className="mt-5 flex flex-col gap-4 border-t border-line pt-5">
+          <h2 className="text-xs font-medium text-ink-soft">Your sign-in</h2>
 
           <Field label="Full name">
             <input
@@ -281,20 +254,10 @@ export default function CampRegisterPage() {
           </div>
         </section>
 
-        <div className="flex items-center justify-between gap-4">
-          <Link to="/login" className="text-sm text-ink-muted hover:text-ink">
-            Back to sign in
-          </Link>
-          <button
-            type="submit"
-            disabled={submitting}
-            className="h-11 px-6 rounded-lg bg-info text-white text-sm font-semibold inline-flex items-center gap-2 disabled:opacity-50"
-          >
-            {submitting && <Loader2 size={15} className="animate-spin" />}
-            Register camp
-          </button>
-        </div>
+        <button type="submit" disabled={submitting} className={`${submitClass} mt-5`}>
+          {submitting ? (<><Loader2 size={16} className="animate-spin" /> Submitting…</>) : 'Register camp'}
+        </button>
       </form>
-    </div>
+    </AuthShell>
   );
 }

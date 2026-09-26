@@ -41,7 +41,51 @@ export const getCampDashboard = () => apiClient.get('/api/camps/dashboard/me').t
 export const registerCamp = (payload) =>
   apiClient.post('/api/camps/register', payload).then(data);
 
+// --- registration + administration ------------------------------------------
+export const registerHospital = (payload) =>
+  apiClient.post('/api/hospitals/register', payload).then(data);
+
+export const listFacilities = (params) =>
+  apiClient.get('/api/admin/facilities', { params }).then(data);
+
+export const getPendingCount = () =>
+  apiClient.get('/api/admin/facilities/pending-count').then(data);
+
+export const approveFacility = (id) =>
+  apiClient.post(`/api/admin/facilities/${id}/approve`).then(data);
+
+export const rejectFacility = (id, reason) =>
+  apiClient.post(`/api/admin/facilities/${id}/reject`, { reason }).then(data);
+
+// --- camp patient register ---------------------------------------------------
+export const listCampVisits = (params) =>
+  apiClient.get('/api/camp-visits', { params }).then(data);
+
+export const getCampVisitSummary = () =>
+  apiClient.get('/api/camp-visits/summary').then(data);
+
+export const createCampVisit = (payload) =>
+  apiClient.post('/api/camp-visits', payload).then(data);
+
+export const updateCampVisit = (id, payload) =>
+  apiClient.put(`/api/camp-visits/${id}`, payload).then(data);
+
+export const deleteCampVisit = (id) =>
+  apiClient.delete(`/api/camp-visits/${id}`).then(data);
+
+export const campVisitsCsvUrl = () => '/api/camp-visits/export.csv';
+
 export default {
+  registerHospital,
+  listFacilities,
+  getPendingCount,
+  approveFacility,
+  rejectFacility,
+  listCampVisits,
+  getCampVisitSummary,
+  createCampVisit,
+  updateCampVisit,
+  deleteCampVisit,
   getCase,
   getResources,
   updateResource,
