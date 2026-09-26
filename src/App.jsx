@@ -27,14 +27,28 @@ const queryClient = new QueryClient({
 
 function ProtectedRoute({ children }) {
   const token = useAuthStore((s) => s.token);
+  const ready = useAuthStore((s) => s.ready);
   if (!token) return <Navigate to="/login" replace />;
+  // Wait for the profile before anything decides where this account belongs.
+  if (!ready) {
+    return (
+      <div className="min-h-screen grid place-items-center bg-page text-ink-muted">
+        <span className="text-sm">Loading…</span>
+      </div>
+    );
+  }
   return children;
 }
 
 /** Each kind of account has its own first screen. */
 function HomeRedirect() {
+  const token = useAuthStore((s) => s.token);
+  const ready = useAuthStore((s) => s.ready);
   const user = useAuthStore((s) => s.user);
   const hospital = useAuthStore((s) => s.hospital);
+  if (!token) return <Navigate to="/login" replace />;
+  // Same reason as ProtectedRoute: decide nothing until the account is known.
+  if (!ready) return null;
   return <Navigate to={homeFor(user, hospital)} replace />;
 }
 

@@ -42,6 +42,9 @@ export const registerCamp = (payload) =>
   apiClient.post('/api/camps/register', payload).then(data);
 
 // --- registration + administration ------------------------------------------
+export const updateCampProfile = (payload) =>
+  apiClient.put('/api/camps/dashboard/me', payload).then(data);
+
 export const registerHospital = (payload) =>
   apiClient.post('/api/hospitals/register', payload).then(data);
 
@@ -77,6 +80,7 @@ export const campVisitsCsvUrl = () => '/api/camp-visits/export.csv';
 
 export default {
   registerHospital,
+  updateCampProfile,
   listFacilities,
   getPendingCount,
   approveFacility,
