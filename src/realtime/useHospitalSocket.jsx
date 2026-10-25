@@ -61,6 +61,9 @@ export function useHospitalSocket() {
           emergency_type: data.report.emergencyType,
           pdf_url: data.pdfUrl ?? null,
           resources_needed: data.resourcesNeeded ?? [],
+          // Whether the describing party answered the questions that were put
+          // to them before this was written, or sent it without.
+          clarification_state: data.report.clarificationState ?? 'none',
         });
         s.markNewReport(data.caseId);
         s.touch();

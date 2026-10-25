@@ -88,6 +88,20 @@ export function normalizeCase(c) {
     generationTimeMs:
       c.aiReport?.generationTimeMs ?? c.ai_report?.generation_time_ms ?? c.generationTimeMs,
     generationStatus: c.ai_report?.generation_status ?? c.generationStatus,
+    // What the record was written from. The questions were put before it
+    // existed, so this says whether the scene answered them or sent the report
+    // without — which is the difference between a stated finding and an
+    // inference from a description.
+    clarificationState:
+      c.clarification_state ??
+      c.aiReport?.clarificationState ??
+      c.ai_report?.clarification_state ??
+      c.clarificationState ??
+      'none',
+    clarifications:
+      c.aiReport?.clarifications ?? c.ai_report?.clarifications ?? c.clarifications ?? [],
+    confidenceScore:
+      c.aiReport?.confidenceScore ?? c.ai_report?.confidence_score ?? c.confidenceScore ?? null,
     hasAiReport:
       !!c.aiReport || !!c.ai_report || c.has_ai_report === true || c.hasAiReport === true,
     etaSeconds: c.estimated_driver_arrival_seconds ?? c.etaSeconds,

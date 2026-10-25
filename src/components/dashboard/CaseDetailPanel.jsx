@@ -32,6 +32,43 @@ function ReportCard({ delay = 0, className = '', children }) {
 }
 
 // Full AI report display: waiting → processing → complete states.
+/// What this record was written from.
+///
+/// The questions were put to the scene before the report existed, so this is
+/// not a quality score — it is provenance. "Confirmed from the scene" means a
+/// human looking at the patient chose those answers and the report was written
+/// around them. "Description only" means the report rests on what was
+/// volunteered, and the reader should weigh it accordingly.
+function SourceBadge({ state, answered, asked }) {
+  if (!asked) {
+    return (
+      <span className="text-[10px] px-2 py-0.5 rounded-full bg-gray-100 text-gray-500">
+        From the description
+      </span>
+    );
+  }
+  if (answered === 0) {
+    return (
+      <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-50 text-amber-700">
+        Description only · {asked} question{asked === 1 ? '' : 's'} unanswered
+      </span>
+    );
+  }
+  const partial = answered < asked;
+  return (
+    <span
+      className={
+        partial
+          ? 'text-[10px] px-2 py-0.5 rounded-full bg-amber-50 text-amber-700'
+          : 'text-[10px] px-2 py-0.5 rounded-full bg-emergency-green/10 text-emergency-green'
+      }
+    >
+      Confirmed from the scene · {answered} of {asked}
+      {state === 'skipped' ? ' · rest skipped' : ''}
+    </span>
+  );
+}
+
 function AIReportSection({ c }) {
   const [showConditions, setShowConditions] = useState(false);
   const [showTranscript, setShowTranscript] = useState(false);
@@ -62,6 +99,8 @@ function AIReportSection({ c }) {
     ? `Voice: ${(c.inputLanguage ?? 'auto').toUpperCase()}`
     : `Text: ${(c.inputLanguage ?? 'EN').toUpperCase()}`;
 
+  const answeredClarifications = (c.clarifications ?? []).filter((q) => q?.answer);
+
   return (
     <div className="space-y-2">
       <div className="flex items-center gap-2 flex-wrap">
@@ -73,6 +112,11 @@ function AIReportSection({ c }) {
         <span className="text-[10px] px-2 py-0.5 rounded-full bg-gray-100 text-gray-500">
           {langLabel}
         </span>
+        <SourceBadge
+          state={c.clarificationState}
+          answered={answeredClarifications.length}
+          asked={(c.clarifications ?? []).length}
+        />
       </div>
 
       {/* Urgency banner */}
@@ -152,6 +196,31 @@ function AIReportSection({ c }) {
         </div>
       )}
 
+      {/* What the scene was asked, and what it said back.
+          Shown separately from the observations these answers fed into, because
+          a reader checking the record needs to know which findings a human
+          confirmed and which the model inferred from a description. Unanswered
+          questions are listed too: knowing that nobody could say whether the
+          chest was moving is itself clinically useful, and hiding it would
+          make the record look more settled than it is. */}
+      {(c.clarifications ?? []).length > 0 && (
+        <ReportCard delay={0.35} className="bg-gray-50">
+          <p className="text-[10px] text-gray-400 mb-1">💬 Asked before this was written</p>
+          <ul className="space-y-1">
+            {c.clarifications.map((q) => (
+              <li key={q.id} className="text-[13px] text-gray-700">
+                <span className="text-gray-500">{q.question}</span>{' '}
+                {q.answer ? (
+                  <span className="font-semibold">{q.answer}</span>
+                ) : (
+                  <span className="italic text-gray-400">not answered</span>
+                )}
+              </li>
+            ))}
+          </ul>
+        </ReportCard>
+      )}
+
       {/* Transcription (collapsible) */}
       {c.transcribedText && (
         <div className="rounded-xl bg-gray-50 p-2.5">
@@ -214,6 +283,14 @@ function downloadReport(c) {
       ? c.keyObservations.map((o) => `    - ${o}`)
       : ['    - None recorded']),
     `  First Aid: ${c.firstAidSuggestion ?? '—'}`,
+    ...((c.clarifications ?? []).length
+      ? [
+          `  Asked before this report was written:`,
+          ...c.clarifications.map(
+            (q) => `    - ${q.question} ${q.answer ?? '(not answered)'}`,
+          ),
+        ]
+      : [`  Written from the description alone; no questions were put.`]),
     ``,
     `DRIVER`,
     `  Name: ${c.driverName ?? 'Unassigned'}`,
